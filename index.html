@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="مترجم">
+<title>مترجم أردو عربي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap">
+<style>
+  /* تخطيط: عمود واحد للجوال — شريط الأدوات، زر كبير، النص المباشر، ثم السجل */
+  :root{
+    --bg:#f3f5f4; --card:#ffffff; --fg:#17201d; --muted:#5f6d68; --line:#dfe5e2;
+    --accent:#0b6e5f; --accent-soft:#d9efea; --stop:#b4232c;
+    --ui:"IBM Plex Sans Arabic",system-ui,-apple-system,Tahoma,sans-serif;
+    --urdu:"Noto Nastaliq Urdu","IBM Plex Sans Arabic",serif;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0e1412; --card:#161e1b; --fg:#e7eeeb; --muted:#94a39e; --line:#26312d;
+    --accent:#3cc4ad; --accent-soft:#16352f; --stop:#f0646c; color-scheme:dark;}}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--fg);font-family:var(--ui);line-height:1.6;
+    padding:env(safe-area-inset-top,0) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0) max(16px,env(safe-area-inset-left,0px))}
+  main{max-width:640px;margin:0 auto;padding-block:14px 32px;display:grid;gap:12px}
+  header{display:flex;justify-content:space-between;align-items:center}
+  h1{font-size:1.25rem;margin:0}
+  .icon-btn{font:inherit;background:none;border:1px solid var(--line);color:var(--fg);border-radius:10px;padding:6px 12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  select,input{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);min-width:0}
+  .swap{flex:1 1 180px}
+  .chk{display:flex;align-items:center;gap:6px}
+  #mainBtn{font:inherit;font-size:1.15rem;font-weight:700;padding:18px;border:0;border-radius:16px;background:var(--accent);color:#fff;width:100%}
+  #mainBtn.on{background:var(--stop)}
+  #mainBtn:disabled{opacity:.55}
+  #status{font-size:.9rem;color:var(--muted);min-height:1.5em;text-align:center}
+  .ur{font-family:var(--urdu);direction:rtl;line-height:2.1}
+  #liveSrc{color:var(--muted);min-height:1.8em}
+  #liveTgt{font-size:1.3rem;font-weight:600;min-height:1.9em}
+  .head{display:flex;justify-content:space-between;align-items:center}
+  .link{font:inherit;background:none;border:0;color:var(--muted);text-decoration:underline}
+  .entry{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--line);padding-block:10px}
+  .entry:first-of-type{border-top:0}
+  .entry .t{flex:1;min-width:0}
+  .entry .s{color:var(--muted);font-size:.95rem}
+  .entry .g{font-size:1.15rem;font-weight:600}
+  .say{font:inherit;border:0;background:var(--accent-soft);color:var(--fg);border-radius:10px;padding:8px 12px;white-space:nowrap}
+  .empty{color:var(--muted);text-align:center;padding:8px}
+  #settings{display:grid;gap:10px}
+  #settings label{display:grid;gap:4px;font-size:.9rem;color:var(--muted)}
+  .note{font-size:.85rem;color:var(--muted);margin:0}
+  .save{font:inherit;font-weight:600;border:0;border-radius:10px;padding:10px;background:var(--accent);color:#fff}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>مترجم أردو ⇄ عربي</h1>
+    <button class="icon-btn" id="setBtn">الإعدادات</button>
+  </header>
+
+  <section class="card" id="settings" hidden>
+    <label>مفتاح Azure Speech (Key 1)
+      <input id="keyIn" type="password" autocomplete="off" placeholder="الصق المفتاح هنا">
+    </label>
+    <label>المنطقة (Region)
+      <input id="regIn" type="text" autocomplete="off" placeholder="westeurope" dir="ltr">
+    </label>
+    <button class="save" id="saveBtn">حفظ</button>
+    <p class="note">المفتاح يُحفظ في متصفح جوالك فقط ولا يُرسل لأي مكان غير Azure.</p>
+  </section>
+
+  <section class="card bar">
+    <select id="dirSel" class="swap" aria-label="اتجاه الترجمة">
+      <option value="ur-ar">أردو ← عربي</option>
+      <option value="ar-ur">عربي ← أردو</option>
+    </select>
+    <select id="voiceSel" aria-label="الصوت"></select>
+    <label class="chk"><input type="checkbox" id="autoSpeak"> نطق تلقائي</label>
+  </section>
+
+  <button id="mainBtn">▶ ابدأ الاستماع</button>
+  <div id="status">جاهز</div>
+
+  <section class="card">
+    <div id="liveSrc"></div>
+    <div id="liveTgt"></div>
+  </section>
+
+  <section class="card">
+    <div class="head"><strong>الترجمات</strong><button class="link" id="clearBtn">مسح</button></div>
+    <div id="history"><div class="empty">ستظهر الترجمات هنا مع زر النطق</div></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1.40.0/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
+<script>
+const DIRS = {
+  "ur-ar": { src:"ur-PK", tgt:"ar", srcUrdu:true,  voices:{ "صوت أنثى":"ar-SA-ZariyahNeural", "صوت ذكر":"ar-SA-HamedNeural" } },
+  "ar-ur": { src:"ar-SA", tgt:"ur", srcUrdu:false, voices:{ "صوت أنثى":"ur-PK-UzmaNeural", "صوت ذكر":"ur-PK-AsadNeural" } }
+};
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(_) { return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(_) {} }
+};
+
+let key = store.get("azKey") || "", region = store.get("azRegion") || "westeurope";
+let recognizer = null, running = false, wakeLock = null;
+
+// عنصر صوت واحد يُفتح بلمسة المستخدم الأولى (شرط في سفاري الآيفون)
+const player = new Audio();
+player.playsInline = true;
+const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+function unlockAudio(){ player.src = SILENT; player.play().catch(()=>{}); }
+
+const setStatus = t => { $("status").textContent = t; };
+
+function fillVoices(){
+  const v = $("voiceSel"); v.innerHTML = "";
+  for (const [label, name] of Object.entries(DIRS[$("dirSel").value].voices)) {
+    const o = document.createElement("option"); o.value = name; o.textContent = label; v.appendChild(o);
+  }
+}
+
+// ---------- النطق: نولّد MP3 من Azure ونشغله في عنصر الصوت ----------
+let queue = Promise.resolve();
+function speak(text){
+  queue = queue.then(() => new Promise(resolve => {
+    if (!key) { setStatus("أدخل مفتاح Azure من الإعدادات"); return resolve(); }
+    const cfg = SpeechSDK.SpeechConfig.fromSubscription(key, region);
+    cfg.speechSynthesisVoiceName = $("voiceSel").value;
+    cfg.speechSynthesisOutputFormat = SpeechSDK.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3;
+    const synth = new SpeechSDK.SpeechSynthesizer(cfg, null);
+    synth.speakTextAsync(text, res => {
+      synth.close();
+      if (res.reason !== SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+        setStatus("تعذر النطق: " + (res.errorDetails || "")); return resolve();
+      }
+      const url = URL.createObjectURL(new Blob([res.audioData], { type:"audio/mpeg" }));
+      player.onended = player.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+      player.src = url;
+      player.play().catch(() => { setStatus("اضغط زر 🔊 لتشغيل الصوت"); resolve(); });
+    }, err => { synth.close(); setStatus("تعذر النطق: " + err); resolve(); });
+  }));
+}
+
+// ---------- السجل ----------
+function addEntry(src, tgt, srcUrdu){
+  const h = $("history"); const e = h.querySelector(".empty"); if (e) e.remove();
+  const row = document.createElement("div"); row.className = "entry";
+  const t = document.createElement("div"); t.className = "t";
+  const s = document.createElement("div"); s.className = "s" + (srcUrdu ? " ur" : ""); s.textContent = src;
+  const g = document.createElement("div"); g.className = "g" + (srcUrdu ? "" : " ur"); g.textContent = tgt;
+  t.append(s, g);
+  const b = document.createElement("button"); b.className = "say"; b.textContent = "🔊 نطق";
+  b.onclick = () => { unlockAudio(); speak(tgt); };
+  row.append(t, b); h.prepend(row);
+}
+
+// ---------- الاستماع والترجمة ----------
+function start(){
+  if (!key) { $("settings").hidden = false; setStatus("أدخل مفتاح Azure أولاً ثم اضغط حفظ"); return; }
+  if (typeof SpeechSDK === "undefined") { setStatus("تعذر تحميل مكتبة Azure، تأكد من الإنترنت"); return; }
+  unlockAudio();
+  $("mainBtn").disabled = true; setStatus("جاري تشغيل المايك...");
+  const d = DIRS[$("dirSel").value];
+  $("liveSrc").className = d.srcUrdu ? "ur" : ""; $("liveTgt").className = d.srcUrdu ? "" : "ur";
+
+  const cfg = SpeechSDK.SpeechTranslationConfig.fromSubscription(key, region);
+  cfg.speechRecognitionLanguage = d.src;
+  cfg.addTargetLanguage(d.tgt);
+  recognizer = new SpeechSDK.TranslationRecognizer(cfg, SpeechSDK.AudioConfig.fromDefaultMicrophoneInput());
+
+  recognizer.recognizing = (s, e) => {
+    $("liveSrc").textContent = e.result.text;
+    $("liveTgt").textContent = e.result.translations.get(d.tgt) || "";
+  };
+  recognizer.recognized = (s, e) => {
+    if (e.result.reason !== SpeechSDK.ResultReason.TranslatedSpeech) return;
+    const tgt = e.result.translations.get(d.tgt);
+    if (tgt && tgt.trim()) { addEntry(e.result.text, tgt, d.srcUrdu); if ($("autoSpeak").checked) speak(tgt); }
+    $("liveSrc").textContent = ""; $("liveTgt").textContent = "";
+  };
+  recognizer.canceled = (s, e) => {
+    const msg = e.errorDetails || "";
+    setStatus(/401|1006|auth/i.test(msg) ? "المفتاح أو المنطقة غير صحيحة، راجع الإعدادات" : "توقف: " + (msg || "تم الإلغاء"));
+    stop(true);
+  };
+
+  recognizer.startContinuousRecognitionAsync(() => {
+    running = true; ui(); setStatus("🎧 يستمع... تكلم الآن");
+    if (navigator.wakeLock) navigator.wakeLock.request("screen").then(w => wakeLock = w).catch(()=>{});
+  }, err => { setStatus("تعذر تشغيل المايك. اسمح للمتصفح باستخدام الميكروفون"); stop(true); });
+}
+
+function stop(keepStatus){
+  if (recognizer) { const r = recognizer; recognizer = null; r.stopContinuousRecognitionAsync(() => r.close(), () => r.close()); }
+  if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
+  if (running && !keepStatus) setStatus("متوقف");
+  running = false; ui();
+}
+function ui(){
+  const b = $("mainBtn"); b.disabled = false;
+  b.textContent = running ? "■ إيقاف" : "▶ ابدأ الاستماع";
+  b.classList.toggle("on", running);
+}
+
+// ---------- ربط الأزرار ----------
+$("mainBtn").onclick = () => running ? stop() : start();
+$("dirSel").onchange = () => { fillVoices(); store.set("dir", $("dirSel").value); if (running) { stop(); setTimeout(start, 400); } };
+$("voiceSel").onchange = () => store.set("voice", $("voiceSel").value);
+$("autoSpeak").onchange = () => store.set("auto", $("autoSpeak").checked ? "1" : "0");
+$("clearBtn").onclick = () => { $("history").innerHTML = '<div class="empty">ستظهر الترجمات هنا مع زر النطق</div>'; };
+$("setBtn").onclick = () => { $("settings").hidden = !$("settings").hidden; };
+$("saveBtn").onclick = () => {
+  key = $("keyIn").value.trim(); region = ($("regIn").value.trim() || "westeurope").toLowerCase().replace(/\s+/g, "");
+  store.set("azKey", key); store.set("azRegion", region);
+  $("settings").hidden = true; setStatus(key ? "تم الحفظ. اضغط ابدأ الاستماع" : "المفتاح فارغ");
+};
+
+// ---------- التهيئة ----------
+$("keyIn").value = key; $("regIn").value = region;
+if (store.get("dir")) $("dirSel").value = store.get("dir");
+fillVoices();
+if (store.get("voice")) $("voiceSel").value = store.get("voice");
+$("autoSpeak").checked = store.get("auto") === "1";
+if (!key) { $("settings").hidden = false; setStatus("أول مرة: أدخل مفتاح Azure والمنطقة ثم اضغط حفظ"); }
+if (location.protocol === "file:") setStatus("افتح الصفحة من رابط https حتى يعمل المايك");
+</script>
+</body>
+</html>
